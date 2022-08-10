@@ -9,6 +9,8 @@ models:
             - ticket_id
             - source_relation
     columns:
+      - name: source_relation
+        description: The zendesk instance (schema) which the ticket belongs to
       - name: ticket_id
         description: Automatically assigned when the ticket is created
         tests:
@@ -178,14 +180,13 @@ models:
 
   - name: zendesk__sla_policies
     description: Each record represents an SLA policy event and additional sla breach and achievement metrics. Calendar and business hour SLA breaches are supported.
-    tests:
-      - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - sla_event_id
-            - source_relation
     columns:
       - name: sla_event_id
-        description: A surrogate key generated from the combination of ticket_id, metric, and sla_applied_at fields
+        description: A surrogate key generated from the combination of source_relation, ticket_id, metric, and sla_applied_at fields
+        tests:
+          - unique
+      - name: source_relation
+        description: The zendesk instance (schema) which the sla policy event belongs to
       - name: ticket_id
         description: A ticket's unique identifier, it is automatically assigned when the ticket is created
       - name: sla_policy_name
@@ -212,6 +213,8 @@ models:
       A daily historical view of the ticket field values defined in the `ticket_field_history_columns` variable
       and the corresponding updater fields defined in the `ticket_field_history_updater_columns` variable.
     columns:
+      - name: source_relation
+        description: The zendesk instance (schema) which the ticket belongs to
       - name: date_day
         description: The date of the day associated with the field values.
       - name: ticket_id
@@ -233,6 +236,8 @@ models:
             - source_relation
     description: Each record represents a Zendesk ticket, enriched with metrics about reply times, resolution times and work times.  Calendar and business hours are supported
     columns:
+      - name: source_relation
+        description: The zendesk instance (schema) which the ticket belongs to
       - name: first_reply_time_calendar_minutes
         description: The number of calendar minutes between when the ticket was created and when the first public agent response occurred
       - name: first_reply_time_business_minutes
@@ -499,6 +504,8 @@ models:
   - name: zendesk__ticket_summary
     description: A single record table containing Zendesk ticket and user summary metrics. These metrics are updated for the current day the model is run.
     columns:
+      - name: source_relation
+        description: The zendesk instance (schema) which the ticket and user belongs to
       - name: user_count
         description: Total count of users created
       - name: active_agent_count
@@ -547,6 +554,8 @@ models:
       A daily historical view of the ticket field values defined in the `ticket_field_history_columns` variable
       for all backlog tickets. Backlog tickets being defined as any ticket not a 'closed', 'deleted', or 'solved' status.
     columns:
+      - name: source_relation
+        description: The zendesk instance (schema) which the ticket belongs to
       - name: date_day
         description: The date of the day associated with the field values
       - name: ticket_id
