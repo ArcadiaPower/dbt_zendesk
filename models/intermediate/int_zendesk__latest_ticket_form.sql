@@ -14,7 +14,8 @@ latest_ticket_form as (
 ),
 
 final as (
-    select 
+    select
+        source_relation,
         ticket_form_id,
         created_at,
         updated_at,

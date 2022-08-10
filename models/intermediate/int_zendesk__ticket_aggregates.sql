@@ -11,16 +11,17 @@ with tickets as (
 
   select *
   from {{ ref('stg_zendesk__brand') }}
-  
+
 ), ticket_tag_aggregate as (
   select
+    ticket_tags.source_relation,
     ticket_tags.ticket_id,
     {{ fivetran_utils.string_agg( 'ticket_tags.tags', "', '" )}} as ticket_tags
   from ticket_tags
-  group by 1
+  group by 1, 2
 
 ), final as (
-  select 
+  select
     tickets.*,
     case when lower(tickets.type) = 'incident'
       then true
@@ -31,7 +32,7 @@ with tickets as (
   from tickets
 
   left join ticket_tag_aggregate
-    using(ticket_id)
+    using(source_relation, ticket_id)
 
   left join brands
     on brands.brand_id = tickets.brand_id

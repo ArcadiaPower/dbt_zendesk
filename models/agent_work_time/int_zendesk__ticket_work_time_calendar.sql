@@ -4,8 +4,9 @@ with ticket_historical_status as (
     from {{ ref('int_zendesk__ticket_historical_status') }}
 
 ), calendar_minutes as (
-  
-    select 
+
+    select
+        source_relation,
         ticket_id,
         status,
         case when status in ('pending') then status_duration_calendar_minutes
@@ -32,16 +33,17 @@ with ticket_historical_status as (
 
 )
 
-select 
-  ticket_id,
-  last_status_assignment_date,
-  sum(ticket_deleted) as ticket_deleted_count,
-  sum(agent_wait_time_in_minutes) as agent_wait_time_in_calendar_minutes,
-  sum(requester_wait_time_in_minutes) as requester_wait_time_in_calendar_minutes,
-  sum(agent_work_time_in_minutes) as agent_work_time_in_calendar_minutes,
-  sum(on_hold_time_in_minutes) as on_hold_time_in_calendar_minutes,
-  sum(new_status_duration_minutes) as new_status_duration_in_calendar_minutes,
-  sum(open_status_duration_minutes) as open_status_duration_in_calendar_minutes,
-  sum(ticket_recoveries) as total_ticket_recoveries
+select
+    source_relation,
+    ticket_id,
+    last_status_assignment_date,
+    sum(ticket_deleted) as ticket_deleted_count,
+    sum(agent_wait_time_in_minutes) as agent_wait_time_in_calendar_minutes,
+    sum(requester_wait_time_in_minutes) as requester_wait_time_in_calendar_minutes,
+    sum(agent_work_time_in_minutes) as agent_work_time_in_calendar_minutes,
+    sum(on_hold_time_in_minutes) as on_hold_time_in_calendar_minutes,
+    sum(new_status_duration_minutes) as new_status_duration_in_calendar_minutes,
+    sum(open_status_duration_minutes) as open_status_duration_in_calendar_minutes,
+    sum(ticket_recoveries) as total_ticket_recoveries
 from calendar_minutes
-group by 1, 2
+group by 1, 2, 3

@@ -9,7 +9,7 @@ with ticket_status_history as (
 )
 
   select
-  
+    source_relation,
     ticket_id,
     valid_starting_at,
     valid_ending_at,

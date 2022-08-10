@@ -1,12 +1,12 @@
 with reply_time_calendar_hours_sla as (
-  
+
   select *
   from {{ ref('int_zendesk__reply_time_calendar_hours') }}
 
 {% if var('using_schedules', True) %}
 
 ), reply_time_business_hours_sla as (
- 
+
   select *
   from {{ ref('int_zendesk__reply_time_business_hours') }}
 
@@ -17,13 +17,14 @@ with reply_time_calendar_hours_sla as (
   from {{ ref('int_zendesk__updates') }}
 
 ), users as (
- 
+
   select *
   from {{ ref('int_zendesk__user_aggregates') }}
 
 ), reply_time_breached_at as (
 
-  select 
+  select
+    source_relation,
     ticket_id,
     sla_policy_name,
     metric,
@@ -37,7 +38,8 @@ with reply_time_calendar_hours_sla as (
 
   union all
 
-  select 
+  select
+    source_relation,
     ticket_id,
     sla_policy_name,
     metric,
@@ -51,6 +53,7 @@ with reply_time_calendar_hours_sla as (
 -- Now that we have the breach time, see when the first reply after the sla policy was applied took place.
 ), ticket_solved_times as (
   select
+    source_relation,
     ticket_id,
     valid_starting_at as solved_at
   from ticket_updates
@@ -58,20 +61,23 @@ with reply_time_calendar_hours_sla as (
   and value in ('solved','closed')
 
 ), reply_time as (
-    select 
+    select
+      ticket_comment.source_relation,
       ticket_comment.ticket_id,
       ticket_comment.valid_starting_at as reply_at,
       commenter.role
     from ticket_updates as ticket_comment
     join users as commenter
-      on commenter.user_id = ticket_comment.user_id
-    where field_name = 'comment' 
+      on commenter.source_relation = ticket_comment.source_relation
+      and commenter.user_id = ticket_comment.user_id
+    where field_name = 'comment'
       and ticket_comment.is_public
       and commenter.role in ('agent','admin')
 
 ), reply_time_breached_at_with_next_reply_timestamp as (
 
-  select 
+  select
+    reply_time_breached_at.source_relation,
     reply_time_breached_at.ticket_id,
     reply_time_breached_at.sla_policy_name,
     reply_time_breached_at.metric,
@@ -83,18 +89,20 @@ with reply_time_calendar_hours_sla as (
     min(solved_at) as next_solved_at
   from reply_time_breached_at
   left join reply_time
-    on reply_time.ticket_id = reply_time_breached_at.ticket_id
+    on reply_time.source_relation = reply_time_breached_at.source_relation
+    and reply_time.ticket_id = reply_time_breached_at.ticket_id
     and reply_time.reply_at > reply_time_breached_at.sla_applied_at
   left join ticket_solved_times
-    on reply_time_breached_at.ticket_id = ticket_solved_times.ticket_id
+    on reply_time_breached_at.source_relation = ticket_solved_times.source_relation
+    and reply_time_breached_at.ticket_id = ticket_solved_times.ticket_id
     and ticket_solved_times.solved_at > reply_time_breached_at.sla_applied_at
-  {{ dbt_utils.group_by(n=6) }}
+  {{ dbt_utils.group_by(n=7) }}
 
 ), reply_time_breached_at_remove_old_sla as (
-  select 
+  select
     *,
     lead(sla_applied_at) over (partition by ticket_id, metric, in_business_hours order by sla_applied_at) as updated_sla_policy_starts_at,
-    case when 
+    case when
       lead(sla_applied_at) over (partition by ticket_id, metric, in_business_hours order by sla_applied_at) --updated sla policy start at time
       < sla_breach_at then true else false end as is_stale_sla_policy,
     case when (sla_breach_at < agent_reply_at and sla_breach_at < next_solved_at)
@@ -105,9 +113,9 @@ with reply_time_calendar_hours_sla as (
       else false
         end as is_sla_breached
   from reply_time_breached_at_with_next_reply_timestamp
-  
+
 ), reply_time_breach as (
-  select 
+  select
     *,
     {{ dbt_utils.datediff("sla_applied_at", "agent_reply_at", 'minute') }} as sla_elapsed_time
   from reply_time_breached_at_remove_old_sla

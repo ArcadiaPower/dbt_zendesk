@@ -16,8 +16,9 @@ with ticket_historical_status as (
     from {{ ref('int_zendesk__schedule_spine') }}
 
 ), ticket_status_crossed_with_schedule as (
-  
+
     select
+      ticket_historical_status.source_relation,
       ticket_historical_status.ticket_id,
       ticket_historical_status.status as ticket_status,
       ticket_schedules.schedule_id,
@@ -32,15 +33,16 @@ with ticket_historical_status as (
 
     from ticket_historical_status
     left join ticket_schedules
-      on ticket_historical_status.ticket_id = ticket_schedules.ticket_id
+      on ticket_historical_status.source_relation = ticket_schedules.source_relation
+      and ticket_historical_status.ticket_id = ticket_schedules.ticket_id
       where {{ fivetran_utils.timestamp_diff('greatest(valid_starting_at, schedule_created_at)', 'least(valid_ending_at, schedule_invalidated_at)', 'second') }} > 0
 
 ), ticket_full_solved_time as (
 
-    select 
+    select
       ticket_status_crossed_with_schedule.*,
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")", 
+            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
             "cast(ticket_status_crossed_with_schedule.status_schedule_start as " ~ dbt_utils.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
@@ -50,7 +52,7 @@ with ticket_historical_status as (
               'second') }} /60
             ) as raw_delta_in_minutes
     from ticket_status_crossed_with_schedule
-    {{ dbt_utils.group_by(n=7) }}
+    {{ dbt_utils.group_by(n=8) }}
 
 ), weeks as (
 
@@ -58,7 +60,7 @@ with ticket_historical_status as (
 
 ), weeks_cross_ticket_full_solved_time as (
     -- because time is reported in minutes since the beginning of the week, we have to split up time spent on the ticket into calendar weeks
-    select 
+    select
       ticket_full_solved_time.*,
       generated_number - 1 as week_number
     from ticket_full_solved_time
@@ -72,12 +74,13 @@ with ticket_historical_status as (
       weeks_cross_ticket_full_solved_time.*,
       greatest(0, start_time_in_minutes_from_week - week_number * (7*24*60)) as ticket_week_start_time,
       least(start_time_in_minutes_from_week + raw_delta_in_minutes - week_number * (7*24*60), (7*24*60)) as ticket_week_end_time
-    
+
     from weeks_cross_ticket_full_solved_time
 
 ), intercepted_periods as (
-  
-    select 
+
+    select
+      weekly_periods.source_relation,
       weekly_periods.ticket_id,
       weekly_periods.week_number,
       weekly_periods.schedule_id,
@@ -88,16 +91,17 @@ with ticket_historical_status as (
       schedule.end_time_utc as schedule_end_time,
       least(ticket_week_end_time, schedule.end_time_utc) - greatest(weekly_periods.ticket_week_start_time, schedule.start_time_utc) as scheduled_minutes
     from weekly_periods
-    join schedule on ticket_week_start_time <= schedule.end_time_utc 
+    join schedule on ticket_week_start_time <= schedule.end_time_utc
       and ticket_week_end_time >= schedule.start_time_utc
       and weekly_periods.schedule_id = schedule.schedule_id
       -- this chooses the Daylight Savings Time or Standard Time version of the schedule
       and weekly_periods.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }}) 
-  
+      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+
 ), business_minutes as (
-  
-    select 
+
+    select
+      source_relation,
       ticket_id,
       ticket_status,
       case when ticket_status in ('pending') then scheduled_minutes
@@ -111,12 +115,13 @@ with ticket_historical_status as (
     from intercepted_periods
 
 )
-  
-    select 
+
+    select
+      source_relation,
       ticket_id,
       sum(agent_wait_time_in_minutes) as agent_wait_time_in_business_minutes,
       sum(requester_wait_time_in_minutes) as requester_wait_time_in_business_minutes,
       sum(agent_work_time_in_minutes) as agent_work_time_in_business_minutes,
       sum(on_hold_time_in_minutes) as on_hold_time_in_business_minutes
     from business_minutes
-    group by 1
+    group by 1, 2

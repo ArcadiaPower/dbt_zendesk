@@ -20,21 +20,21 @@ with historical_solved_status as (
   from {{ ref('int_zendesk__ticket_historical_group') }}
 
 ), solved_times as (
-  
+
   select
-  
+    source_relation,
     ticket_id,
     min(valid_starting_at) as first_solved_at,
     max(valid_starting_at) as last_solved_at,
-    count(status) as solved_count 
+    count(status) as solved_count
 
   from historical_solved_status
-  group by 1
+  group by 1, 2
 
 )
 
   select
-
+    ticket.source_relation,
     ticket.ticket_id,
     ticket.created_at,
     solved_times.first_solved_at,
@@ -54,30 +54,30 @@ with historical_solved_status as (
         end as count_reopens,
 
     {{ fivetran_utils.timestamp_diff(
-        'ticket_historical_assignee.first_agent_assignment_date', 
+        'ticket_historical_assignee.first_agent_assignment_date',
         'solved_times.last_solved_at',
         'minute' ) }} as first_assignment_to_resolution_calendar_minutes,
     {{ fivetran_utils.timestamp_diff(
-        'ticket_historical_assignee.last_agent_assignment_date', 
+        'ticket_historical_assignee.last_agent_assignment_date',
         'solved_times.last_solved_at',
         'minute' ) }} as last_assignment_to_resolution_calendar_minutes,
     {{ fivetran_utils.timestamp_diff(
-        'ticket.created_at', 
+        'ticket.created_at',
         'solved_times.first_solved_at',
         'minute' ) }} as first_resolution_calendar_minutes,
     {{ fivetran_utils.timestamp_diff(
-        'ticket.created_at', 
+        'ticket.created_at',
         'solved_times.last_solved_at',
         'minute') }} as final_resolution_calendar_minutes
 
   from ticket
 
   left join ticket_historical_assignee
-    using(ticket_id)
+    using(source_relation, ticket_id)
 
   left join ticket_historical_group
-    using(ticket_id)
+    using(source_relation, ticket_id)
 
   left join solved_times
-    using(ticket_id)
+    using(source_relation, ticket_id)
 

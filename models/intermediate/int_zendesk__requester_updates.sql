@@ -8,6 +8,7 @@ with ticket_updates as (
 
 ), ticket_requester as (
     select
+        ticket.source_relation,
         ticket.ticket_id,
         ticket.requester_id,
         ticket_updates.valid_starting_at
@@ -15,19 +16,21 @@ with ticket_updates as (
     from ticket
 
     left join ticket_updates
-        on ticket_updates.ticket_id = ticket.ticket_id
-            and ticket_updates.user_id = ticket.requester_id
+        on ticket_updates.source_relation = ticket_updates.source_relation
+        and ticket_updates.ticket_id = ticket.ticket_id
+        and ticket_updates.user_id = ticket.requester_id
 
 ), final as (
-    select 
+    select
+        source_relation,
         ticket_id,
         requester_id,
         max(valid_starting_at) as last_updated,
         count(*) as total_updates
     from ticket_requester
 
-    group by 1, 2
+    group by 1, 2, 3
 )
 
-select * 
+select *
 from final

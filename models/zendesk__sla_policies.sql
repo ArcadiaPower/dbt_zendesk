@@ -1,8 +1,7 @@
 --final step where we union together all of the reply time, agent work time, and requester wait time sla's
 
 with reply_time_sla as (
-
-  select * 
+  select *
   from {{ ref('int_zendesk__reply_time_combined') }}
 
 ), agent_work_calendar_sla as (
@@ -30,6 +29,7 @@ with reply_time_sla as (
 
 ), all_slas_unioned as (
   select
+    source_relation,
     ticket_id,
     sla_policy_name,
     metric,
@@ -44,6 +44,7 @@ with reply_time_sla as (
 union all
 
   select
+    source_relation,
     ticket_id,
     sla_policy_name,
     'agent_work_time' as metric,
@@ -55,11 +56,12 @@ union all
     {{ fivetran_utils.max_bool("is_breached_during_schedule") }}
   from agent_work_calendar_sla
 
-  group by 1, 2, 3, 4, 5, 6
+  {{ dbt_utils.group_by(n=7) }}
 
 union all
 
   select
+    source_relation,
     ticket_id,
     sla_policy_name,
     'requester_wait_time' as metric,
@@ -71,14 +73,15 @@ union all
     {{ fivetran_utils.max_bool("is_breached_during_schedule") }}
   from requester_wait_calendar_sla
 
-  group by 1, 2, 3, 4, 5, 6
+  {{ dbt_utils.group_by(n=7) }}
 
 
 {% if var('using_schedules', True) %}
 
-union all 
+union all
 
-  select 
+  select
+    source_relation,
     ticket_id,
     sla_policy_name,
     'agent_work_time' as metric,
@@ -89,12 +92,13 @@ union all
     sum(running_total_scheduled_minutes) as sla_elapsed_time,
     {{ fivetran_utils.max_bool("is_breached_during_schedule") }}
   from agent_work_business_sla
-  
-  group by 1, 2, 3, 4, 5, 6
 
-union all 
+  {{ dbt_utils.group_by(n=7) }}
 
-  select 
+union all
+
+  select
+    source_relation,
     ticket_id,
     sla_policy_name,
     'requester_wait_time' as metric,
@@ -104,17 +108,17 @@ union all
     max(sla_breach_at) as sla_breach_at,
     sum(running_total_scheduled_minutes) as sla_elapsed_time,
     {{ fivetran_utils.max_bool("is_breached_during_schedule") }}
-    
   from requester_wait_business_sla
-  
-  group by 1, 2, 3, 4, 5, 6
+
+  {{ dbt_utils.group_by(n=7) }}
 
 {% endif %}
 
 )
 
-select 
-  {{ dbt_utils.surrogate_key(['ticket_id', 'metric', 'sla_applied_at']) }} as sla_event_id,
+select
+  {{ dbt_utils.surrogate_key(['source_relation', 'ticket_id', 'metric', 'sla_applied_at']) }} as sla_event_id,
+  source_relation,
   ticket_id,
   sla_policy_name,
   metric,

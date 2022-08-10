@@ -101,7 +101,7 @@ select
   ticket_work_time_calendar.agent_work_time_in_calendar_minutes,
   ticket_work_time_calendar.on_hold_time_in_calendar_minutes,
   coalesce(ticket_comments.count_agent_comments, 0) as total_agent_replies,
-  
+
   case when ticket_enriched.is_requester_active = true and ticket_enriched.requester_last_login_at is not null
     then ({{ dbt_utils.datediff("ticket_enriched.requester_last_login_at", dbt_utils.current_timestamp(), 'second') }} /60)
       end as requester_last_login_age_minutes,
@@ -114,40 +114,41 @@ select
   case when lower(ticket_enriched.status) not in ('solved','closed')
     then ({{ dbt_utils.datediff("ticket_enriched.updated_at", dbt_utils.current_timestamp(), 'second') }} /60)
       end as unsolved_ticket_age_since_update_minutes,
-  case when lower(ticket_enriched.status) in ('solved','closed') and ticket_comments.is_one_touch_resolution 
+  case when lower(ticket_enriched.status) in ('solved','closed') and ticket_comments.is_one_touch_resolution
     then true
     else false
       end as is_one_touch_resolution,
-  case when lower(ticket_enriched.status) in ('solved','closed') and ticket_comments.is_two_touch_resolution 
+  case when lower(ticket_enriched.status) in ('solved','closed') and ticket_comments.is_two_touch_resolution
     then true
-    else false 
+    else false
       end as is_two_touch_resolution,
   case when lower(ticket_enriched.status) in ('solved','closed') and not ticket_comments.is_one_touch_resolution
-      and not ticket_comments.is_two_touch_resolution 
+      and not ticket_comments.is_two_touch_resolution
     then true
-    else false 
+    else false
       end as is_multi_touch_resolution
 
 
 from ticket_enriched
 
 left join ticket_reply_times_calendar
-  using (ticket_id)
+  using (source_relation, ticket_id)
 
 left join ticket_resolution_times_calendar
-  using (ticket_id)
+  using (source_relation, ticket_id)
 
 left join ticket_work_time_calendar
-  using (ticket_id)
+  using (source_relation, ticket_id)
 
 left join ticket_comments
-  using(ticket_id)
+  using(source_relation, ticket_id)
 
 {% if var('using_schedules', True) %}
 
 ), business_hour_metrics as (
 
-  select 
+  select
+    ticket_enriched.source_relation,
     ticket_enriched.ticket_id,
     ticket_first_resolution_time_business.first_resolution_business_minutes,
     ticket_full_resolution_time_business.full_resolution_business_minutes,
@@ -160,16 +161,16 @@ left join ticket_comments
   from ticket_enriched
 
   left join ticket_first_resolution_time_business
-    using (ticket_id)
+    using (source_relation, ticket_id)
 
   left join ticket_full_resolution_time_business
-    using (ticket_id)
-  
+    using (source_relation, ticket_id)
+
   left join ticket_first_reply_time_business
-    using (ticket_id)  
-  
+    using (source_relation, ticket_id)
+
   left join ticket_work_time_business
-    using (ticket_id)
+    using (source_relation, ticket_id)
 
 )
 
@@ -194,12 +195,12 @@ select
 
 from calendar_hour_metrics
 
-left join business_hour_metrics 
-  using (ticket_id)
+left join business_hour_metrics
+  using (source_relation, ticket_id)
 
 {% else %}
 
-) 
+)
 
 select *
 from calendar_hour_metrics

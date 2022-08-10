@@ -8,6 +8,7 @@ with ticket_metrics as (
 
 ), user_sum as (
     select
+        source_relation,
         cast(1 as {{ dbt_utils.type_int() }}) as summary_helper,
         sum(case when is_active = true
             then 1
@@ -31,10 +32,11 @@ with ticket_metrics as (
                 end) as suspended_user_count
     from user_table
 
-    group by 1
+    group by 1, 2
 
 ), ticket_metric_sum as (
-    select 
+    select
+        source_relation,
         cast(1 as {{ dbt_utils.type_int() }}) as summary_helper,
         sum(case when lower(status) = 'new'
             then 1
@@ -106,37 +108,40 @@ with ticket_metrics as (
         count(count_public_comments) as total_public_comments,
         count(total_comments)
     from ticket_metrics
-    
-    group by 1
+
+    group by 1, 2
 
 
 ), final as (
     select
-        user_sum.user_count,
-        user_sum.active_agent_count,
-        user_sum.deleted_user_count,
-        user_sum.end_user_count,
-        user_sum.suspended_user_count,
-        ticket_metric_sum.new_ticket_count,
-        ticket_metric_sum.on_hold_ticket_count,
-        ticket_metric_sum.open_ticket_count,
-        ticket_metric_sum.pending_ticket_count,
-        ticket_metric_sum.solved_ticket_count,
-        ticket_metric_sum.problem_ticket_count,
-        ticket_metric_sum.assigned_ticket_count,
-        ticket_metric_sum.reassigned_ticket_count,
-        ticket_metric_sum.reopened_ticket_count,
-        ticket_metric_sum.surveyed_satisfaction_ticket_count,
-        ticket_metric_sum.unassigned_unsolved_ticket_count,
-        ticket_metric_sum.unreplied_ticket_count,
-        ticket_metric_sum.unreplied_unsolved_ticket_count,
-        ticket_metric_sum.unsolved_ticket_count,
-        ticket_metric_sum.recovered_ticket_count,
-        ticket_metric_sum.deleted_ticket_count
+        user_sum.source_relation,
+        max(user_sum.user_count) as user_count,
+        max(user_sum.active_agent_count) as active_agent_count,
+        max(user_sum.deleted_user_count) as deleted_user_count,
+        max(user_sum.end_user_count) as end_user_count,
+        max(user_sum.suspended_user_count) as suspended_user_count,
+        max(ticket_metric_sum.new_ticket_count) as new_ticket_count,
+        max(ticket_metric_sum.on_hold_ticket_count) as on_hold_ticket_count,
+        max(ticket_metric_sum.open_ticket_count) as open_ticket_count,
+        max(ticket_metric_sum.pending_ticket_count) as pending_ticket_count,
+        max(ticket_metric_sum.solved_ticket_count) as solved_ticket_count,
+        max(ticket_metric_sum.problem_ticket_count) as problem_ticket_count,
+        max(ticket_metric_sum.assigned_ticket_count) as assigned_ticket_count,
+        max(ticket_metric_sum.reassigned_ticket_count) as reassigned_ticket_count,
+        max(ticket_metric_sum.reopened_ticket_count) as reopened_ticket_count,
+        max(ticket_metric_sum.surveyed_satisfaction_ticket_count) as surveyed_satisfaction_ticket_count,
+        max(ticket_metric_sum.unassigned_unsolved_ticket_count) as unassigned_unsolved_ticket_count,
+        max(ticket_metric_sum.unreplied_ticket_count) as unreplied_ticket_count,
+        max(ticket_metric_sum.unreplied_unsolved_ticket_count) as unreplied_unsolved_ticket_count,
+        max(ticket_metric_sum.unsolved_ticket_count) as unsolved_ticket_count,
+        max(ticket_metric_sum.recovered_ticket_count) as recovered_ticket_count,
+        max(ticket_metric_sum.deleted_ticket_count) as deleted_ticket_count
     from user_sum
 
     left join ticket_metric_sum
-        using(summary_helper)
+        using(source_relation, summary_helper)
+
+    group by 1
 )
 
 select *

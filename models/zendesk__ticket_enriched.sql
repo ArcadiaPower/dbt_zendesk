@@ -35,7 +35,7 @@ with ticket as (
     from {{ ref('int_zendesk__assignee_updates') }}
 
 ), ticket_group as (
-    
+
     select *
     from {{ ref('stg_zendesk__group') }}
 
@@ -46,7 +46,7 @@ with ticket as (
 
 ), joined as (
 
-    select 
+    select
 
         ticket.*,
 
@@ -93,8 +93,8 @@ with ticket as (
         requester_org.updated_at as requester_organization_updated_at,
         submitter.external_id as submitter_external_id,
         submitter.role as submitter_role,
-        case when submitter.role in ('agent','admin') 
-            then true 
+        case when submitter.role in ('agent','admin')
+            then true
             else false
                 end as is_agent_submitted,
         submitter.email as submitter_email,
@@ -122,47 +122,57 @@ with ticket as (
         assignee.user_tags as assignee_tag
         {% endif %}
 
-    
+
     from ticket
 
     --Requester Joins
     join users as requester
-        on requester.user_id = ticket.requester_id
+        on requester.source_relation = ticket.source_relation
+        and requester.user_id = ticket.requester_id
 
     left join organization as requester_org
-        on requester_org.organization_id = requester.organization_id
+        on requester_org.source_relation = requester.source_relation
+        and requester_org.organization_id = requester.organization_id
 
     left join requester_updates
-        on requester_updates.ticket_id = ticket.ticket_id
-            and requester_updates.requester_id = ticket.requester_id
-    
+        on requester_updates.source_relation = ticket.source_relation
+        and requester_updates.ticket_id = ticket.ticket_id
+        and requester_updates.requester_id = ticket.requester_id
+
     --Submitter Joins
     join users as submitter
-        on submitter.user_id = ticket.submitter_id
-    
+        on submitter.source_relation = ticket.source_relation
+        and submitter.user_id = ticket.submitter_id
+
     --Assignee Joins
     left join users as assignee
-        on assignee.user_id = ticket.assignee_id
+        on assignee.source_relation = ticket.source_relation
+        and assignee.user_id = ticket.assignee_id
 
     left join assignee_updates
-        on assignee_updates.ticket_id = ticket.ticket_id
-            and assignee_updates.assignee_id = ticket.assignee_id
+        on assignee_updates.source_relation = ticket.source_relation
+        and assignee_updates.ticket_id = ticket.ticket_id
+        and assignee_updates.assignee_id = ticket.assignee_id
 
     --Ticket, Org, and Brand Joins
     left join ticket_group
-        on ticket_group.group_id = ticket.group_id
+        on ticket_group.source_relation = ticket.source_relation
+        and ticket_group.group_id = ticket.group_id
 
     --If you use using_ticket_form_history this will be included, if not it will be ignored.
     {% if var('using_ticket_form_history', True) %}
     left join latest_ticket_form
-        on latest_ticket_form.ticket_form_id = ticket.ticket_form_id
+        on latest_ticket_form.source_relation = ticket.source_relation
+        and latest_ticket_form.ticket_form_id = ticket.ticket_form_id
     {% endif %}
 
     left join organization
-        on organization.organization_id = ticket.organization_id
+        on organization.source_relation = ticket.source_relation
+        and organization.organization_id = ticket.organization_id
 
     left join latest_satisfaction_ratings
-        on latest_satisfaction_ratings.ticket_id = ticket.ticket_id
+        on latest_satisfaction_ratings.source_relation = ticket.source_relation
+        and latest_satisfaction_ratings.ticket_id = ticket.ticket_id
 )
 
 select *

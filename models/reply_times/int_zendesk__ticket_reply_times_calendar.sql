@@ -11,14 +11,14 @@ with ticket as (
 )
 
 select
-
+  ticket.source_relation,
   ticket.ticket_id,
   sum(case when is_first_comment then reply_time_calendar_minutes
     else null end) as first_reply_time_calendar_minutes,
   sum(reply_time_calendar_minutes) as total_reply_time_calendar_minutes --total combined time the customer waits for internal response
-  
+
 from ticket
 left join ticket_reply_times
-  using (ticket_id)
+  using (source_relation, ticket_id)
 
-group by 1
+group by 1, 2

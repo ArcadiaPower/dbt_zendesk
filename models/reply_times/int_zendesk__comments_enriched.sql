@@ -11,17 +11,18 @@ with ticket_comment as (
 
 ), joined as (
 
-    select 
+    select
 
         ticket_comment.*,
         case when commenter.role = 'end-user' then 'external_comment'
             when commenter.role in ('agent','admin') then 'internal_comment'
             else 'unknown' end as commenter_role
-    
+
     from ticket_comment
-    
+
     join users as commenter
-        on commenter.user_id = ticket_comment.user_id
+        on commenter.source_relation = ticket_comment.source_relation
+        and commenter.user_id = ticket_comment.user_id
 
 ), add_previous_commenter_role as (
     /*
@@ -32,7 +33,7 @@ with ticket_comment as (
         *,
         coalesce(
             lag(commenter_role) over (partition by ticket_id order by valid_starting_at)
-            , 'first_comment') 
+            , 'first_comment')
             as previous_commenter_role
     from joined
     where is_public
@@ -46,7 +47,7 @@ with ticket_comment as (
     where not is_public
 )
 
-select 
+select
     *,
     first_value(valid_starting_at) over (partition by ticket_id order by valid_starting_at desc, ticket_id rows unbounded preceding) as last_comment_added_at,
     sum(case when not is_public then 1 else 0 end) over (partition by ticket_id order by valid_starting_at rows between unbounded preceding and current row) as previous_internal_comment_count

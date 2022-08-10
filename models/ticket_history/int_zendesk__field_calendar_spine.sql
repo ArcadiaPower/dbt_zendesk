@@ -16,16 +16,17 @@ with calendar as (
 
 ), ticket as (
 
-    select 
+    select
         *,
         -- closed tickets cannot be re-opened or updated, and solved tickets are automatically closed after a pre-defined number of days configured in your Zendesk settings
         cast( {{ dbt_utils.date_trunc('day', "case when status != 'closed' then " ~ dbt_utils.current_timestamp() ~ " else updated_at end") }} as date) as open_until
     from {{ var('ticket') }}
-    
+
 ), joined as (
 
-    select 
+    select
         calendar.date_day,
+        ticket.source_relation,
         ticket.ticket_id
     from calendar
     inner join ticket
@@ -37,7 +38,7 @@ with calendar as (
 
     select
         *,
-        {{ dbt_utils.surrogate_key(['date_day','ticket_id']) }} as ticket_day_id
+        {{ dbt_utils.surrogate_key(['date_day','source_relation','ticket_id']) }} as ticket_day_id
     from joined
 
 )

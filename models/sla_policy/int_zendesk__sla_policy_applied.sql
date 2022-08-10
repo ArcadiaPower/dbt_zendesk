@@ -11,7 +11,7 @@ with ticket_field_history as (
 
 ), sla_policy_name as (
 
-  select 
+  select
     *
   from {{ ref('int_zendesk__updates') }}
   where field_name = ('sla_policy')
@@ -24,6 +24,7 @@ with ticket_field_history as (
 ), sla_policy_applied as (
 
   select
+    ticket.source_relation,
     ticket_field_history.ticket_id,
     ticket.created_at as ticket_created_at,
     ticket_field_history.valid_starting_at,
@@ -35,7 +36,8 @@ with ticket_field_history as (
     {{ fivetran_utils.json_extract('ticket_field_history.value', 'in_business_hours') }} = 'true' as in_business_hours
   from ticket_field_history
   join ticket
-    on ticket.ticket_id = ticket_field_history.ticket_id
+    on ticket.source_relation = ticket_field_history.source_relation
+    and ticket.ticket_id = ticket_field_history.ticket_id
   where ticket_field_history.value is not null
     and ticket_field_history.field_name in ('next_reply_time', 'first_reply_time', 'agent_work_time', 'requester_wait_time')
 
@@ -45,9 +47,10 @@ with ticket_field_history as (
     sla_policy_name.value as sla_policy_name
   from sla_policy_applied
   left join sla_policy_name
-    on sla_policy_name.ticket_id = sla_policy_applied.ticket_id
+    on sla_policy_name.source_relation = sla_policy_applied.source_relation
+      and sla_policy_name.ticket_id = sla_policy_applied.ticket_id
       and sla_policy_applied.valid_starting_at >= sla_policy_name.valid_starting_at
-      and sla_policy_applied.valid_starting_at < coalesce(sla_policy_name.valid_ending_at, {{ dbt_utils.current_timestamp() }}) 
+      and sla_policy_applied.valid_starting_at < coalesce(sla_policy_name.valid_ending_at, {{ dbt_utils.current_timestamp() }})
   where sla_policy_applied.latest_sla = 1
 )
 

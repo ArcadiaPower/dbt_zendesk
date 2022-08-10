@@ -11,7 +11,8 @@ with ticket_history as (
     from {{ ref('stg_zendesk__ticket') }}
 
 ), updates_union as (
-    select 
+    select
+        source_relation,
         ticket_id,
         field_name,
         value,
@@ -24,6 +25,7 @@ with ticket_history as (
     union all
 
     select
+        source_relation,
         ticket_id,
         cast('comment' as {{ dbt_utils.type_string() }}) as field_name,
         body as value,
@@ -40,7 +42,8 @@ with ticket_history as (
     from updates_union
 
     left join tickets
-        on tickets.ticket_id = updates_union.ticket_id
+        on tickets.source_relation = updates_union.source_relation
+        and tickets.ticket_id = updates_union.ticket_id
 )
 
 select *

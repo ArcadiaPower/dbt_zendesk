@@ -6,6 +6,7 @@ with assignee_updates as (
 
 ), calculate_metrics as (
     select
+        source_relation,
         ticket_id,
         field_name as assignee_id,
         value,
@@ -22,18 +23,20 @@ with assignee_updates as (
 
 ), unassigned_time as (
     select
+        source_relation,
         ticket_id,
-        sum(case when assignee_id is not null and previous_assignee is null 
+        sum(case when assignee_id is not null and previous_assignee is null
             then {{ dbt_utils.datediff("coalesce(previous_update, ticket_created_date)", "valid_starting_at", 'second') }} / 60
             else 0
                 end) as ticket_unassigned_duration_calendar_minutes,
         count(distinct value) as unique_assignee_count
     from calculate_metrics
 
-    group by 1
+    group by 1, 2
 
 ), window_group as (
     select
+        calculate_metrics.source_relation,
         calculate_metrics.ticket_id,
         calculate_metrics.first_agent_assignment_date,
         calculate_metrics.first_assignee_id,
@@ -42,7 +45,7 @@ with assignee_updates as (
         calculate_metrics.assignee_stations_count
     from calculate_metrics
 
-    {{ dbt_utils.group_by(n=6) }}
+    {{ dbt_utils.group_by(n=7) }}
 
 ), final as (
     select
@@ -52,7 +55,7 @@ with assignee_updates as (
     from window_group
 
     left join unassigned_time
-        using(ticket_id)
+        using(source_relation, ticket_id)
 )
 
 select *

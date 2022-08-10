@@ -1,11 +1,11 @@
 -- depends_on: {{ ref('stg_zendesk__ticket_field_history') }}
 
-{{ 
+{{
     config(
         materialized='incremental',
         partition_by = {'field': 'date_day', 'data_type': 'date'},
         unique_key='ticket_day_id'
-        ) 
+        )
 }}
 
 {% if execute -%}
@@ -16,6 +16,7 @@
 with field_history as (
 
     select
+        source_relation,
         ticket_id,
         field_name,
         valid_ending_at,
@@ -38,7 +39,7 @@ with field_history as (
 
 ), event_order as (
 
-    select 
+    select
         *,
         row_number() over (
             partition by cast(valid_starting_at as date), ticket_id, field_name
@@ -59,10 +60,10 @@ with field_history as (
     -- For each column that is in both the ticket_field_history_columns variable and the field_history table,
     -- pivot out the value into it's own column. This will feed the daily slowly changing dimension model.
 
-    select 
+    select
+        source_relation,
         ticket_id,
         cast({{ dbt_utils.date_trunc('day', 'valid_starting_at') }} as date) as date_day
-
         {% for col in results_list if col in var('ticket_field_history_columns') %}
             {% set col_xf = col|lower %}
             ,min(case when lower(field_name) = '{{ col|lower }}' then filtered.value end) as {{ col_xf }}
@@ -86,15 +87,14 @@ with field_history as (
                 {% endfor %}
             {% endif %}
         {% endfor %}
-    
     from filtered
-    group by 1,2
+    group by 1, 2, 3
 
 ), surrogate_key as (
 
-    select 
+    select
         *,
-        {{ dbt_utils.surrogate_key(['ticket_id','date_day'])}} as ticket_day_id
+        {{ dbt_utils.surrogate_key(['ticket_id','source_relation','date_day'])}} as ticket_day_id
     from pivots
 
 )

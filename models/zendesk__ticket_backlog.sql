@@ -35,6 +35,7 @@ with ticket_field_history as (
 ), backlog as (
     select
         ticket_field_history.date_day
+        ,ticket_field_history.source_relation
         ,ticket_field_history.ticket_id
         ,ticket_field_history.status
         ,tickets.created_channel
@@ -68,40 +69,47 @@ with ticket_field_history as (
     from ticket_field_history
 
     left join tickets
-        on tickets.ticket_id = ticket_field_history.ticket_id
+        on tickets.source_relation = tickets.source_relation
+        and tickets.ticket_id = ticket_field_history.ticket_id
 
     {% if 'ticket_form_id' in var('ticket_field_history_columns') %} --Join not needed if field is not located in variable, otherwise it is included.
     left join ticket_forms
-        on ticket_forms.ticket_form_id = cast(ticket_field_history.ticket_form_id as {{ dbt_utils.type_bigint() }})
+        on ticket_forms.source_relation and ticket_field_history.source_relation
+        and ticket_forms.ticket_form_id = cast(ticket_field_history.ticket_form_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     {% if 'group_id' in var('ticket_field_history_columns') %}--Join not needed if field is not located in variable, otherwise it is included.
     left join group_names
-        on group_names.group_id = cast(ticket_field_history.group_id as {{ dbt_utils.type_bigint() }})
+        on group_names.source_relation = ticket_field_history.source_relation
+        and group_names.group_id = cast(ticket_field_history.group_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     {% if 'assignee_id' in var('ticket_field_history_columns') or 'requester_id' in var('ticket_field_history_columns') or 'locale_id' in var('ticket_field_history_columns')%} --Join not needed if fields is not located in variable, otherwise it is included.
     left join users as assignee
-        on assignee.user_id = cast(ticket_field_history.assignee_id as {{ dbt_utils.type_bigint() }})
+        on assignee.source_relation = ticket_field_history.source_relation
+        and assignee.user_id = cast(ticket_field_history.assignee_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     {% if 'requester_id' in var('ticket_field_history_columns') %} --Join not needed if field is not located in variable, otherwise it is included.
     left join users as requester
-        on requester.user_id = cast(ticket_field_history.requester_id as {{ dbt_utils.type_bigint() }})
+        on requester.source_relation = ticket_field_history.source_relation
+        and requester.user_id = cast(ticket_field_history.requester_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     {% if 'brand_id' in var('ticket_field_history_columns') %} --Join not needed if field is not located in variable, otherwise it is included.
     left join brands
-        on brands.brand_id = cast(ticket_field_history.brand_id as {{ dbt_utils.type_bigint() }})
+        on brands.source_relation = ticket_field_history.source_relation
+        and brands.brand_id = cast(ticket_field_history.brand_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     {% if 'organization_id' in var('ticket_field_history_columns') %} --Join not needed if field is not located in variable, otherwise it is included.
     left join organizations
-        on organizations.organization_id = cast(ticket_field_history.organization_id as {{ dbt_utils.type_bigint() }})
+        on organizations.source_relation = ticket_field_history.source_relation
+        and organizations.organization_id = cast(ticket_field_history.organization_id as {{ dbt_utils.type_bigint() }})
     {% endif %}
 
     where ticket_field_history.status not in ('closed', 'solved', 'deleted')
 )
 
 select *
-from backlog 
+from backlog

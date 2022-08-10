@@ -20,21 +20,22 @@ with ticket_field_history as (
 
                 {% elif col in ['updater_user_id','updater_organization_id'] %}
                     ,coalesce(updater_info.{{ col|lower }}, -1) as {{ col }}
-                
+
                 {% elif col in ['updater_last_login_at'] %}
                     ,coalesce(updater_info.{{ col|lower }}, current_timestamp) as {{ col }}
-                
+
                 {% else %}
                     ,coalesce(updater_info.{{ col|lower }}, concat('zendesk_trigger_change_', '{{ col }}' )) as {{ col }}
-  
+
                 {% endif %}
             {% endfor %}
-        {% endif %}  
+        {% endif %}
 
     from ticket_field_history
 
     left join updater_info
-        on ticket_field_history.user_id = updater_info.updater_user_id
+        on ticket_field_history.source_relation = updater_info.source_relation
+        and ticket_field_history.user_id = updater_info.updater_user_id
 )
 select *
 from final
