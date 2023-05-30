@@ -88,8 +88,8 @@ with ticket_schedules as (
     and ticket_week_end_time >= schedule.start_time_utc
     and weekly_periods.schedule_id = schedule.schedule_id
     -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-    and weekly_periods.sla_applied_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-    and weekly_periods.sla_applied_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+    and weekly_periods.sla_applied_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+    and weekly_periods.sla_applied_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 ), intercepted_periods_with_breach_flag as (
 
@@ -111,7 +111,7 @@ with ticket_schedules as (
   select
     *,
     schedule_end_time + remaining_minutes as breached_at_minutes,
-    {{ dbt_utils.date_trunc('week', 'sla_applied_at') }} as starting_point,
+    {{ dbt.date_trunc('week', 'sla_applied_at') }} as starting_point,
     {{ fivetran_utils.timestamp_add(
         "minute",
         "cast(((7*24*60) * week_number) + (schedule_end_time + remaining_minutes) as " ~ dbt_utils.type_int() ~ " )",

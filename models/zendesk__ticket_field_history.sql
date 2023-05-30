@@ -111,7 +111,7 @@ fill_values as (
         {% for col in change_data_columns if col.name|lower not in  ['source_relation','ticket_id','valid_from','valid_to','ticket_day_id'] %}
 
         -- we de-nulled the true null values earlier in order to differentiate them from nulls that just needed to be backfilled
-        , case when  cast( {{ col.name }} as {{ dbt_utils.type_string() }} ) = 'is_null' then null else {{ col.name }} end as {{ col.name }}
+        , case when  cast( {{ col.name }} as {{ dbt.type_string() }} ) = 'is_null' then null else {{ col.name }} end as {{ col.name }}
         {% endfor %}
 
     from fill_values
@@ -119,7 +119,7 @@ fill_values as (
 ), surrogate_key as (
 
     select
-        {{ dbt_utils.surrogate_key(['date_day','source_relation','ticket_id']) }} as ticket_day_id,
+        {{ dbt_utils.generate_surrogate_key(['date_day','source_relation','ticket_id']) }} as ticket_day_id,
         *
 
     from fix_null_values

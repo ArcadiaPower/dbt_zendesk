@@ -95,8 +95,8 @@ with ticket_historical_status as (
       and ticket_week_end_time >= schedule.start_time_utc
       and weekly_periods.schedule_id = schedule.schedule_id
       -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-      and weekly_periods.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+      and weekly_periods.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 ), business_minutes as (
 

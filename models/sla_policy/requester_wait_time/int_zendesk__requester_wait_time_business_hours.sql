@@ -120,8 +120,8 @@ with requester_wait_time_filtered_statuses as (
       and ticket_week_end_time_minute >= schedule.start_time_utc
       and weekly_period_requester_wait_time.schedule_id = schedule.schedule_id
       -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-      and weekly_period_requester_wait_time.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-      and weekly_period_requester_wait_time.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+      and weekly_period_requester_wait_time.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+      and weekly_period_requester_wait_time.status_valid_starting_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 ), intercepted_periods_with_running_total as (
 
