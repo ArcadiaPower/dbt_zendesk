@@ -53,8 +53,8 @@ with agent_work_time_filtered_statuses as (
     select
       ticket_status_crossed_with_schedule.*,
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.valid_starting_at','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(ticket_status_crossed_with_schedule.valid_starting_at as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.valid_starting_at','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(ticket_status_crossed_with_schedule.valid_starting_at as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as valid_starting_at_in_minutes_from_week,
       ({{ fivetran_utils.timestamp_diff(
@@ -120,8 +120,8 @@ with agent_work_time_filtered_statuses as (
       and ticket_week_end_time_minute >= schedule.start_time_utc
       and weekly_period_agent_work_time.schedule_id = schedule.schedule_id
       -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-      and weekly_period_agent_work_time.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-      and weekly_period_agent_work_time.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+      and weekly_period_agent_work_time.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+      and weekly_period_agent_work_time.status_valid_starting_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 ), intercepted_periods_with_running_total as (
 
@@ -168,8 +168,8 @@ with agent_work_time_filtered_statuses as (
     *,
     {{ fivetran_utils.timestamp_add(
       "minute",
-      "cast(((7*24*60) * week_number) + breach_minutes_from_week as " ~ dbt_utils.type_int() ~ " )",
-      "" ~ dbt_utils.date_trunc('week', 'valid_starting_at') ~ "",
+      "cast(((7*24*60) * week_number) + breach_minutes_from_week as " ~ dbt.type_int() ~ " )",
+      "" ~ dbt.date_trunc('week', 'valid_starting_at') ~ "",
       ) }} as sla_breach_at
   from intercepted_periods_agent_filtered
 

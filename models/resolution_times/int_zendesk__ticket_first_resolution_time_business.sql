@@ -28,8 +28,8 @@ with ticket_resolution_times_calendar as (
     min(ticket_resolution_times_calendar.first_solved_at) as first_solved_at,
 
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_schedules.schedule_created_at','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(ticket_schedules.schedule_created_at as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('ticket_schedules.schedule_created_at','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(ticket_schedules.schedule_created_at as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
     greatest(0,
@@ -89,8 +89,8 @@ with ticket_resolution_times_calendar as (
     and ticket_week_end_time >= schedule.start_time_utc
     and weekly_periods.schedule_id = schedule.schedule_id
     -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-    and weekly_periods.first_solved_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-    and weekly_periods.first_solved_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+    and weekly_periods.first_solved_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+    and weekly_periods.first_solved_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 )
 

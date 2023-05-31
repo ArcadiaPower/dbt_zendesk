@@ -26,6 +26,7 @@ models:
     utils:
       +materialized: ephemeral
 vars:
+  surrogate_key_treat_nulls_as_empty_strings: true
   zendesk:
     ticket_field_history_columns: ['assignee_id', 'status', 'priority']
     ticket_field_history_updater_columns: []

@@ -117,7 +117,7 @@ union all
 )
 
 select
-  {{ dbt_utils.surrogate_key(['source_relation', 'ticket_id', 'metric', 'sla_applied_at']) }} as sla_event_id,
+  {{ dbt_utils.generate_surrogate_key(['source_relation', 'ticket_id', 'metric', 'sla_applied_at']) }} as sla_event_id,
   source_relation,
   ticket_id,
   sla_policy_name,
@@ -127,11 +127,11 @@ select
   in_business_hours,
   sla_breach_at,
   case when sla_elapsed_time is null
-    then {{ dbt_utils.datediff("sla_applied_at", dbt_utils.current_timestamp(), 'minute') }}  --This will create an entry for active sla's
+    then {{ dbt.datediff("sla_applied_at", dbt.current_timestamp_backcompat(), 'minute') }}  --This will create an entry for active sla's
     else sla_elapsed_time
       end as sla_elapsed_time,
   sla_breach_at > current_timestamp as is_active_sla,
-  case when (sla_breach_at > {{ dbt_utils.current_timestamp() }})
+  case when (sla_breach_at > {{ dbt.current_timestamp_backcompat() }})
     then null
     else is_sla_breached
       end as is_sla_breach

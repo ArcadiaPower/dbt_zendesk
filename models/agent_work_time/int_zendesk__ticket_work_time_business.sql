@@ -42,8 +42,8 @@ with ticket_historical_status as (
     select
       ticket_status_crossed_with_schedule.*,
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(ticket_status_crossed_with_schedule.status_schedule_start as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(ticket_status_crossed_with_schedule.status_schedule_start as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
       ({{ fivetran_utils.timestamp_diff(
@@ -95,8 +95,8 @@ with ticket_historical_status as (
       and ticket_week_end_time >= schedule.start_time_utc
       and weekly_periods.schedule_id = schedule.schedule_id
       -- this chooses the Daylight Savings Time or Standard Time version of the schedule
-      and weekly_periods.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt_utils.type_timestamp() }})
-      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt_utils.type_timestamp() }})
+      and weekly_periods.status_valid_ending_at >= cast(schedule.valid_from as {{ dbt.type_timestamp() }})
+      and weekly_periods.status_valid_starting_at < cast(schedule.valid_until as {{ dbt.type_timestamp() }})
 
 ), business_minutes as (
 
