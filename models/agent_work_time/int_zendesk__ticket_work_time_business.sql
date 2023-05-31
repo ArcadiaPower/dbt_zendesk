@@ -52,7 +52,7 @@ with ticket_historical_status as (
               'second') }} /60
             ) as raw_delta_in_minutes
     from ticket_status_crossed_with_schedule
-_    {{ dbt_utils.group_by(n=8) }}
+    {{ dbt_utils.group_by(n=8) }}
 
 ), weeks as (
 
