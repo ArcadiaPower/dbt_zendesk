@@ -33,8 +33,8 @@ with ticket_schedules as (
     sla_policy_applied.*,
     ticket_schedules.schedule_id,
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('sla_policy_applied.sla_applied_at','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(sla_policy_applied.sla_applied_at as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('sla_policy_applied.sla_applied_at','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(sla_policy_applied.sla_applied_at as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
       schedule_business_hours.total_schedule_weekly_business_minutes
@@ -114,7 +114,7 @@ with ticket_schedules as (
     {{ dbt.date_trunc('week', 'sla_applied_at') }} as starting_point,
     {{ fivetran_utils.timestamp_add(
         "minute",
-        "cast(((7*24*60) * week_number) + (schedule_end_time + remaining_minutes) as " ~ dbt_utils.type_int() ~ " )",
+        "cast(((7*24*60) * week_number) + (schedule_end_time + remaining_minutes) as " ~ dbt.type_int() ~ " )",
         "" ~ dbt_utils.date_trunc('week', 'sla_applied_at') ~ "" ) }} as sla_breach_at
   from intercepted_periods_with_breach_flag
 

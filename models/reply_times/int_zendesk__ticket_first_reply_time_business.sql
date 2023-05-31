@@ -40,8 +40,8 @@ with ticket_reply_times as (
     min(first_reply_time.agent_responded_at) as agent_responded_at,
 
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_schedules.schedule_created_at','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(ticket_schedules.schedule_created_at as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('ticket_schedules.schedule_created_at','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(ticket_schedules.schedule_created_at as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
     greatest(0,

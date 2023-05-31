@@ -42,8 +42,8 @@ with ticket_historical_status as (
     select
       ticket_status_crossed_with_schedule.*,
     ({{ fivetran_utils.timestamp_diff(
-            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt_utils.type_timestamp() ~ ")",
-            "cast(ticket_status_crossed_with_schedule.status_schedule_start as " ~ dbt_utils.type_timestamp() ~ ")",
+            "cast(" ~ dbt_date.week_start('ticket_status_crossed_with_schedule.status_schedule_start','UTC') ~ "as " ~ dbt.type_timestamp() ~ ")",
+            "cast(ticket_status_crossed_with_schedule.status_schedule_start as " ~ dbt.type_timestamp() ~ ")",
             'second') }} /60
           ) as start_time_in_minutes_from_week,
       ({{ fivetran_utils.timestamp_diff(
@@ -52,7 +52,7 @@ with ticket_historical_status as (
               'second') }} /60
             ) as raw_delta_in_minutes
     from ticket_status_crossed_with_schedule
-    {{ dbt_utils.group_by(n=8) }}
+_    {{ dbt_utils.group_by(n=8) }}
 
 ), weeks as (
 
