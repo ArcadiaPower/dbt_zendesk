@@ -115,7 +115,7 @@ with ticket_schedules as (
     {{ fivetran_utils.timestamp_add(
         "minute",
         "cast(((7*24*60) * week_number) + (schedule_end_time + remaining_minutes) as " ~ dbt.type_int() ~ " )",
-        "" ~ dbt_utils.date_trunc('week', 'sla_applied_at') ~ "" ) }} as sla_breach_at
+        "" ~ dbt.date_trunc('week', 'sla_applied_at') ~ "" ) }} as sla_breach_at
   from intercepted_periods_with_breach_flag
 
 ), reply_time_business_hours_sla as (
